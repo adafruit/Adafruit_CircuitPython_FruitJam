@@ -38,18 +38,10 @@ or individual libraries can be installed using
 `circup <https://github.com/adafruit/circup>`_.
 
 
-
-.. todo:: Describe the Adafruit product this library works with. For PCBs, you can also add the
-image from the assets folder in the PCB's GitHub repo.
-
-`Purchase one from the Adafruit shop <http://www.adafruit.com/products/>`_
+`Fruit Jam will be available from the Adafruit shop <http://www.adafruit.com/products/>`_
 
 Installing from PyPI
 =====================
-.. note:: This library is not available on PyPI yet. Install documentation is included
-   as a standard element. Stay tuned for PyPI availability!
-
-.. todo:: Remove the above note if PyPI version is/will be available at time of release.
 
 On supported GNU/Linux systems like the Raspberry Pi, you can install the driver locally `from
 PyPI <https://pypi.org/project/adafruit-circuitpython-fruitjam/>`_.
@@ -100,8 +92,16 @@ Or the following command to update an existing version:
 Usage Example
 =============
 
-.. todo:: Add a quick, simple example. It and other examples should live in the
-examples folder and be included in docs/examples.rst.
+.. code-block:: python
+
+    import supervisor
+
+    from adafruit_fruitjam.peripherals import request_display_config
+
+    print(f"Display is None ? {supervisor.runtime.display is None}")
+    print(f"size: {supervisor.runtime.display.width}, {supervisor.runtime.display.height}")
+    request_display_config(360, 200)
+    print(f"size: {supervisor.runtime.display.width}, {supervisor.runtime.display.height}")
 
 Documentation
 =============
