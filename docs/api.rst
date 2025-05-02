@@ -9,3 +9,6 @@ API Reference
 
 .. automodule:: adafruit_fruitjam
     :members:
+
+.. automodule:: adafruit_fruitjam.peripherals
+    :members:
