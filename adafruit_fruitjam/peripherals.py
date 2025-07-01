@@ -26,11 +26,15 @@ Implementation Notes
 
 """
 
+import audiobusio
 import board
 import displayio
 import framebufferio
 import picodvi
 import supervisor
+from digitalio import DigitalInOut, Direction, Pull
+from neopixel import NeoPixel
+import adafruit_tlv320
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FruitJam.git"
@@ -74,3 +78,70 @@ def request_display_config(width, height):
         color_depth=COLOR_DEPTH_LUT[width],
     )
     supervisor.runtime.display = framebufferio.FramebufferDisplay(fb)
+
+
+class Peripherals:
+    """Peripherals Helper Class for the FruitJam Library
+
+
+    Attributes:
+        neopixels (NeoPxiels): The NeoPixels on the Fruit Jam board.
+            See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
+    """
+    def __init__(self):
+        self.neopixels = NeoPixel(board.NEOPIXEL, 5)
+
+        self._buttons = []
+        for pin in (board.BUTTON1, board.BUTTON2, board.BUTTON3):
+            switch = DigitalInOut(pin)
+            switch.direction = Direction.INPUT
+            switch.pull = Pull.UP
+            self._buttons.append(switch)
+
+        i2c = board.I2C()
+        self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
+
+        # set sample rate & bit depth
+        self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
+
+        # use headphones
+        self._dac.headphone_output = True
+        self._dac.headphone_volume = -15  # dB
+
+        self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
+
+    @property
+    def button1(self) -> bool:
+        """
+        Return whether Button 1 is pressed
+        """
+        return not self._buttons[0].value
+
+    @property
+    def button2(self) -> bool:
+        """
+        Return whether Button 2 is pressed
+        """
+        return not self._buttons[1].value
+
+    @property
+    def button3(self) -> bool:
+        """
+        Return whether Button 3 is pressed
+        """
+        return not self._buttons[2].value
+
+    @property
+    def any_button_pressed(self) -> bool:
+        """
+        Return whether any button is pressed
+        """
+        return True in [button.value for (i, button) in enumerate(self._buttons)]
+
+    @property
+    def dac(self):
+        return self._dac
+
+    @property
+    def audio(self):
+        return self._audio

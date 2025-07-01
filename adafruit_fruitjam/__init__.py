@@ -28,3 +28,19 @@ Implementation Notes
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FruitJam.git"
+
+from adafruit_fruitjam.peripherals import Peripherals
+
+
+class FruitJam:
+    def __init__(self):
+        self.peripherals = Peripherals()
+
+
+    # @property
+    # def neopixels(self):
+    #     return self.peripherals.neopixels
+
+    def __getattr__(self, name):
+        if name in dir(self.peripherals):
+            return getattr(self.peripherals, name)
