@@ -1,19 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 Tim Cocks for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
+import time
+
 import displayio
 import supervisor
 from audiocore import WaveFile
-import time
 
 from adafruit_fruitjam import FruitJam
 
-
-colors = [0xff00ff, 0xffff00, 0x00ff00]
+colors = [0xFF00FF, 0xFFFF00, 0x00FF00]
 
 fruitjam = FruitJam()
 fruitjam.neopixels.brightness = 0.1
-fruitjam.neopixels.fill(0xff00ff)
+fruitjam.neopixels.fill(0xFF00FF)
 
 time.sleep(2)
 fruitjam.neopixels.fill(0x000000)

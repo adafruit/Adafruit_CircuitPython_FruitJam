@@ -26,6 +26,7 @@ Implementation Notes
 
 """
 
+import adafruit_tlv320
 import audiobusio
 import board
 import displayio
@@ -34,7 +35,6 @@ import picodvi
 import supervisor
 from digitalio import DigitalInOut, Direction, Pull
 from neopixel import NeoPixel
-import adafruit_tlv320
 
 __version__ = "0.0.0+auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_FruitJam.git"
@@ -88,6 +88,7 @@ class Peripherals:
         neopixels (NeoPxiels): The NeoPixels on the Fruit Jam board.
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
+
     def __init__(self):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 

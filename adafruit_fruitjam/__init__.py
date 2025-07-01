@@ -36,7 +36,6 @@ class FruitJam:
     def __init__(self):
         self.peripherals = Peripherals()
 
-
     @property
     def neopixels(self):
         return self.peripherals.neopixels
