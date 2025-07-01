@@ -37,10 +37,22 @@ class FruitJam:
         self.peripherals = Peripherals()
 
 
-    # @property
-    # def neopixels(self):
-    #     return self.peripherals.neopixels
+    @property
+    def neopixels(self):
+        return self.peripherals.neopixels
 
-    def __getattr__(self, name):
-        if name in dir(self.peripherals):
-            return getattr(self.peripherals, name)
+    @property
+    def button1(self):
+        return self.peripherals.button1
+
+    @property
+    def button2(self):
+        return self.peripherals.button2
+
+    @property
+    def button3(self):
+        return self.peripherals.button3
+
+    @property
+    def audio(self):
+        return self.peripherals.audio
