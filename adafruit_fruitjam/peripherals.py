@@ -79,6 +79,19 @@ def request_display_config(width, height):
     )
     supervisor.runtime.display = framebufferio.FramebufferDisplay(fb)
 
+def get_display_config():
+    """
+    Get the current display size configuration. 
+
+    :return: width: The width of the display in pixels.
+    :return: height: The height of the display in pixels.
+    :return: pixel_depth of the display in pixels
+    """
+    try:
+      display = (picodvi.Framebuffer.width, picodvi.Framebuffer.height, picodvi.Framebuffer.color_depth)
+      return display
+    except ValueError as e:
+      return (None, None, None)
 
 class Peripherals:
     """Peripherals Helper Class for the FruitJam Library
