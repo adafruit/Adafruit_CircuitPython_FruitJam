@@ -48,7 +48,7 @@ COLOR_DEPTH_LUT = {
 }
 
 
-def request_display_config(width, height):
+def request_display_config(width, height, color_depth=None):
     """
     Request a display size configuration. If the display is un-initialized,
     or is currently using a different configuration it will be initialized
@@ -58,42 +58,54 @@ def request_display_config(width, height):
 
     :param width: The width of the display in pixels.
     :param height: The height of the display in pixels.
+    :param color_depth: The color depth of the display in bits.
+      Valid values are 1, 2, 4, 8, 16, 32. Larger resolutions must use
+      smaller color_depths due to RAM limitations. Default color_depth for
+      720 and 640 width is 8, and default color_depth for 320 and 360 width
+      is 16.
     :return: None
     """
     if (width, height) not in VALID_DISPLAY_SIZES:
         raise ValueError(f"Invalid display size. Must be one of: {VALID_DISPLAY_SIZES}")
 
-    displayio.release_displays()
-    fb = picodvi.Framebuffer(
-        width,
-        height,
-        clk_dp=board.CKP,
-        clk_dn=board.CKN,
-        red_dp=board.D0P,
-        red_dn=board.D0N,
-        green_dp=board.D1P,
-        green_dn=board.D1N,
-        blue_dp=board.D2P,
-        blue_dn=board.D2N,
-        color_depth=COLOR_DEPTH_LUT[width],
-    )
-    supervisor.runtime.display = framebufferio.FramebufferDisplay(fb)
+    # if user does not specify a requested color_depth
+    if color_depth is None:
+        # use the maximum color depth for given width
+        color_depth = COLOR_DEPTH_LUT[width]
+
+    requested_config = (width, height, color_depth)
+
+    if requested_config != get_display_config():
+        displayio.release_displays()
+        fb = picodvi.Framebuffer(
+            width,
+            height,
+            clk_dp=board.CKP,
+            clk_dn=board.CKN,
+            red_dp=board.D0P,
+            red_dn=board.D0N,
+            green_dp=board.D1P,
+            green_dn=board.D1N,
+            blue_dp=board.D2P,
+            blue_dn=board.D2N,
+            color_depth=color_depth,
+        )
+        supervisor.runtime.display = framebufferio.FramebufferDisplay(fb)
 
 
 def get_display_config():
     """
     Get the current display size configuration.
 
-    :return: width: The width of the display in pixels.
-    :return: height: The height of the display in pixels.
-    :return: pixel_depth of the display in pixels
+    :return: display_config: Tuple containing the width, height, and color_depth of the display
+      in pixels and bits respectively.
     """
 
-    try:
-        display = supervisor.runtime.display
+    display = supervisor.runtime.display
+    if display is not None:
         display_config = (display.width, display.height, display.framebuffer.color_depth)
         return display_config
-    except ValueError:
+    else:
         return (None, None, None)
 
 
