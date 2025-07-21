@@ -1,12 +1,27 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 Tim Cocks for Adafruit Industries
+# SPDX-FileCopyrightText: 2025 Tim Cocks, written for Adafruit Industries
 #
-# SPDX-License-Identifier: Unlicense
+# SPDX-License-Identifier: MIT
 
-import supervisor
+# NOTE: Make sure you've created your settings.toml file before running this example
+# https://learn.adafruit.com/adafruit-pyportal/create-your-settings-toml-file
 
-from adafruit_fruitjam.peripherals import request_display_config
+from adafruit_fruitjam import FruitJam
 
-print(f"Display is None ? {supervisor.runtime.display is None}")
-print(f"size: {supervisor.runtime.display.width}, {supervisor.runtime.display.height}")
-request_display_config(360, 200)
-print(f"size: {supervisor.runtime.display.width}, {supervisor.runtime.display.height}")
+# Set a data source URL
+TEXT_URL = "http://wifitest.adafruit.com/testwifi/index.html"
+
+# Create the PyPortal object
+fruitjam = FruitJam(url=TEXT_URL, text_position=(10, 20))
+fruitjam.neopixels.brightness = 0.1
+
+# Go get that data
+print("Fetching text from", TEXT_URL)
+data = fruitjam.fetch()
+
+# Print out what we got
+print("-" * 40)
+print(data)
+print("-" * 40)
+
+while True:
+    pass
