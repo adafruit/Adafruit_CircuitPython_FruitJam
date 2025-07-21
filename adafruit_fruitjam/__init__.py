@@ -15,7 +15,7 @@ Implementation Notes
 
 **Hardware:**
 
-* `Adafruit Fruit Jam <url>`_"
+* `Adafruit Fruit Jam <https://www.adafruit.com/product/6200>`_
 
 **Software and Dependencies:**
 

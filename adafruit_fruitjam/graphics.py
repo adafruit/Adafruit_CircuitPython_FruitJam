@@ -1,4 +1,5 @@
 # SPDX-FileCopyrightText: 2020 Melissa LeBlanc-Williams, written for Adafruit Industries
+# SPDX-FileCopyrightText: 2025 Tim Cocks, written for Adafruit Industries
 #
 # SPDX-License-Identifier: Unlicense
 """
