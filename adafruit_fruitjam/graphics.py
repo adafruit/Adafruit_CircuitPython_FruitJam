@@ -66,3 +66,34 @@ class Graphics(GraphicsBase):
         if supervisor.runtime.display is None:
             request_display_config(640, 480)
         super().__init__(supervisor.runtime.display, default_bg=default_bg, debug=debug)
+
+    def qrcode(self, qr_data, *, qr_size=1, x=0, y=0, hide_background=False):  # noqa: PLR0913 Too many arguments in function definition
+        """Display a QR code
+
+        :param qr_data: The data for the QR code.
+        :param int qr_size: The scale of the QR code.
+        :param x: The x position of upper left corner of the QR code on the display.
+        :param y: The y position of upper left corner of the QR code on the display.
+        :param hide_background: Hide the background while showing the QR code.
+
+        """
+        super().qrcode(
+            qr_data,
+            qr_size=qr_size,
+            x=x,
+            y=y,
+        )
+        if hide_background:
+            self.display.root_group = self._qr_group
+        self._qr_only = hide_background
+
+    def hide_QR(self):
+        """Clear any QR codes that are currently on the screen"""
+
+        if self._qr_only:
+            self.display.root_group = self.root_group
+        else:
+            try:
+                self._qr_group.pop()
+            except (IndexError, AttributeError):  # later test if empty
+                pass

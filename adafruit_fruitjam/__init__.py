@@ -162,7 +162,7 @@ class FruitJam(PortalBase):
 
         network = Network(
             status_neopixel=self.peripherals.neopixels
-            if status_neopixel is None
+            if status_neopixel is None or status_neopixel == board.NEOPIXEL
             else status_neopixel,
             esp=esp,
             external_spi=spi,
@@ -191,14 +191,14 @@ class FruitJam(PortalBase):
 
         # Convenience Shortcuts for compatibility
 
-        # self.sd_check = self.peripherals.sd_check
-        # self.play_file = self.peripherals.play_file
-        # self.stop_play = self.peripherals.stop_play
+        self.sd_check = self.peripherals.sd_check
+        self.play_file = self.peripherals.play_file
+        self.stop_play = self.peripherals.stop_play
 
         self.image_converter_url = self.network.image_converter_url
         self.wget = self.network.wget
-        # self.show_QR = self.graphics.qrcode
-        # self.hide_QR = self.graphics.hide_QR
+        self.show_QR = self.graphics.qrcode
+        self.hide_QR = self.graphics.hide_QR
 
         if default_bg is not None:
             self.graphics.set_background(default_bg)
@@ -207,7 +207,8 @@ class FruitJam(PortalBase):
             print("Init caption")
         if caption_font:
             self._caption_font = self._load_font(caption_font)
-        self.set_caption(caption_text, caption_position, caption_color)
+        if caption_text is not None:
+            self.set_caption(caption_text, caption_position, caption_color)
 
         if text_font:
             if text_position is not None and isinstance(text_position[0], (list, tuple)):
