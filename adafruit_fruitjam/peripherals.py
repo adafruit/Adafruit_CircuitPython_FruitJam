@@ -26,12 +26,19 @@ Implementation Notes
 
 """
 
+import os
+
+import adafruit_sdcard
 import adafruit_tlv320
 import audiobusio
+import audiocore
 import board
+import busio
+import digitalio
 import displayio
 import framebufferio
 import picodvi
+import storage
 import supervisor
 from digitalio import DigitalInOut, Direction, Pull
 from neopixel import NeoPixel
@@ -140,6 +147,35 @@ class Peripherals:
 
         self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
 
+        self._sd_mounted = False
+        sd_pins_in_use = False
+        SD_CS = board.SD_CS
+        # try to Connect to the sdcard card and mount the filesystem.
+        try:
+            # initialze CS pin
+            cs = digitalio.DigitalInOut(SD_CS)
+        except ValueError:
+            # likely the SDCard was auto-initialized by the core
+            sd_pins_in_use = True
+
+            # if placeholder.txt file does not exist
+            if "placeholder.txt" not in os.listdir("/sd/"):
+                self._sd_mounted = True
+
+        if not sd_pins_in_use:
+            try:
+                # if sd CS pin was not in use
+                # try to initialize and mount the SDCard
+                sdcard = adafruit_sdcard.SDCard(
+                    busio.SPI(board.SD_SCK, board.SD_MOSI, board.SD_MISO), cs
+                )
+                vfs = storage.VfsFat(sdcard)
+                storage.mount(vfs, "/sd")
+                self._sd_mounted = True
+            except OSError:
+                # sdcard init or mounting failed
+                self._sd_mounted = False
+
     @property
     def button1(self) -> bool:
         """
@@ -175,3 +211,30 @@ class Peripherals:
     @property
     def audio(self):
         return self._audio
+
+    def sd_check(self):
+        return self._sd_mounted
+
+    def play_file(self, file_name, wait_to_finish=True):
+        """Play a wav file.
+
+        :param str file_name: The name of the wav file to play on the speaker.
+        :param bool wait_to_finish: flag to determine if this is a blocking call
+
+        """
+
+        # can't use `with` because we need wavefile to remain open after return
+        self.wavfile = open(file_name, "rb")
+        wavedata = audiocore.WaveFile(self.wavfile)
+        self.audio.play(wavedata)
+        if not wait_to_finish:
+            return
+        while self.audio.playing:
+            pass
+        self.wavfile.close()
+
+    def stop_play(self):
+        """Stops playing a wav file."""
+        self.audio.stop()
+        if self.wavfile is not None:
+            self.wavfile.close()
