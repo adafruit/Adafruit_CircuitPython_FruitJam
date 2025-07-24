@@ -30,6 +30,8 @@ autodoc_mock_imports = [
     "framebufferio",
     "picodvi",
     "audiobusio",
+    "audiocore",
+    "storage",
     "terminalio",
 ]
 
