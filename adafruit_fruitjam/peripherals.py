@@ -202,7 +202,7 @@ class Peripherals:
         """
         Return whether any button is pressed
         """
-        return True in [button.value for (i, button) in enumerate(self._buttons)]
+        return True in [not button.value for (i, button) in enumerate(self._buttons)]
 
     @property
     def dac(self):
