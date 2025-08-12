@@ -85,9 +85,7 @@ def request_display_config(width=None, height=None, color_depth=None):
     
     # if user does not specify height, use matching height
     if height is None:
-        for size in VALID_DISPLAY_SIZES:
-            if width == size[0]:
-                height = size[1]
+        height = next((h for w, h in VALID_DISPLAY_SIZES if width == w))
 
     # if user does not specify a requested color_depth
     if color_depth is None:
