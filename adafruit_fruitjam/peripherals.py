@@ -55,7 +55,7 @@ COLOR_DEPTH_LUT = {
 }
 
 
-def request_display_config(width, height, color_depth=None):
+def request_display_config(width=None, height=None, color_depth=None):
     """
     Request a display size configuration. If the display is un-initialized,
     or is currently using a different configuration it will be initialized
@@ -72,8 +72,22 @@ def request_display_config(width, height, color_depth=None):
       is 16.
     :return: None
     """
-    if (width, height) not in VALID_DISPLAY_SIZES:
+    # if user does not specify width, use default configuration
+    if width is None and (width := os.getenv("CIRCUITPY_DISPLAY_WIDTH")) is None:
+        raise ValueError("No CIRCUITPY_DISPLAY_WIDTH specified in settings.toml.")
+    
+    # check that we have a valid display size
+    if (
+        (height is not None and (width, height) not in VALID_DISPLAY_SIZES) or
+        (height is None and width not in [size[0] for size in VALID_DISPLAY_SIZES])
+    ):
         raise ValueError(f"Invalid display size. Must be one of: {VALID_DISPLAY_SIZES}")
+    
+    # if user does not specify height, use matching height
+    if height is None:
+        for size in VALID_DISPLAY_SIZES:
+            if width == size[0]:
+                height = size[1]
 
     # if user does not specify a requested color_depth
     if color_depth is None:
@@ -202,7 +216,7 @@ class Peripherals:
         """
         Return whether any button is pressed
         """
-        return True in [button.value for (i, button) in enumerate(self._buttons)]
+        return True in [not button.value for (i, button) in enumerate(self._buttons)]
 
     @property
     def dac(self):
