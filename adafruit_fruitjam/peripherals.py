@@ -63,8 +63,11 @@ def request_display_config(width=None, height=None, color_depth=None):
 
     This function will set the initialized display to ``supervisor.runtime.display``
 
-    :param width: The width of the display in pixels.
-    :param height: The height of the display in pixels.
+    :param width: The width of the display in pixels. Leave unspecified to default
+      to the ``CIRCUITPY_DISPLAY_WIDTH`` environmental variable if provided. Otherwise,
+      a ``ValueError`` exception will be thrown.
+    :param height: The height of the display in pixels. Leave unspecified to default
+      to the appropriate height for the provided width.
     :param color_depth: The color depth of the display in bits.
       Valid values are 1, 2, 4, 8, 16, 32. Larger resolutions must use
       smaller color_depths due to RAM limitations. Default color_depth for
