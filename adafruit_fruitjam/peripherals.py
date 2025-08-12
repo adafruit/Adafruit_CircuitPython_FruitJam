@@ -55,7 +55,7 @@ COLOR_DEPTH_LUT = {
 }
 
 
-def request_display_config(width, height, color_depth=None):
+def request_display_config(width=None, height=None, color_depth=None):
     """
     Request a display size configuration. If the display is un-initialized,
     or is currently using a different configuration it will be initialized
@@ -63,8 +63,11 @@ def request_display_config(width, height, color_depth=None):
 
     This function will set the initialized display to ``supervisor.runtime.display``
 
-    :param width: The width of the display in pixels.
-    :param height: The height of the display in pixels.
+    :param width: The width of the display in pixels. Leave unspecified to default
+      to the ``CIRCUITPY_DISPLAY_WIDTH`` environmental variable if provided. Otherwise,
+      a ``ValueError`` exception will be thrown.
+    :param height: The height of the display in pixels. Leave unspecified to default
+      to the appropriate height for the provided width.
     :param color_depth: The color depth of the display in bits.
       Valid values are 1, 2, 4, 8, 16, 32. Larger resolutions must use
       smaller color_depths due to RAM limitations. Default color_depth for
@@ -72,8 +75,19 @@ def request_display_config(width, height, color_depth=None):
       is 16.
     :return: None
     """
-    if (width, height) not in VALID_DISPLAY_SIZES:
+    # if user does not specify width, use default configuration
+    if width is None and (width := os.getenv("CIRCUITPY_DISPLAY_WIDTH")) is None:
+        raise ValueError("No CIRCUITPY_DISPLAY_WIDTH specified in settings.toml.")
+
+    # check that we have a valid display size
+    if (height is not None and (width, height) not in VALID_DISPLAY_SIZES) or (
+        height is None and width not in [size[0] for size in VALID_DISPLAY_SIZES]
+    ):
         raise ValueError(f"Invalid display size. Must be one of: {VALID_DISPLAY_SIZES}")
+
+    # if user does not specify height, use matching height
+    if height is None:
+        height = next((h for w, h in VALID_DISPLAY_SIZES if width == w))
 
     # if user does not specify a requested color_depth
     if color_depth is None:
