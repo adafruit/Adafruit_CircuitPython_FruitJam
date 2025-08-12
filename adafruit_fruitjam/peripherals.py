@@ -75,14 +75,13 @@ def request_display_config(width=None, height=None, color_depth=None):
     # if user does not specify width, use default configuration
     if width is None and (width := os.getenv("CIRCUITPY_DISPLAY_WIDTH")) is None:
         raise ValueError("No CIRCUITPY_DISPLAY_WIDTH specified in settings.toml.")
-    
+
     # check that we have a valid display size
-    if (
-        (height is not None and (width, height) not in VALID_DISPLAY_SIZES) or
-        (height is None and width not in [size[0] for size in VALID_DISPLAY_SIZES])
+    if (height is not None and (width, height) not in VALID_DISPLAY_SIZES) or (
+        height is None and width not in [size[0] for size in VALID_DISPLAY_SIZES]
     ):
         raise ValueError(f"Invalid display size. Must be one of: {VALID_DISPLAY_SIZES}")
-    
+
     # if user does not specify height, use matching height
     if height is None:
         height = next((h for w, h in VALID_DISPLAY_SIZES if width == w))
