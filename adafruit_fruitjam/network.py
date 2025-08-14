@@ -88,7 +88,6 @@ class Network(NetworkBase):
         image_position=None,
         image_dim_json_path=None,
     ):
-
         if isinstance(status_neopixel, microcontroller.Pin):
             status_led = neopixel.NeoPixel(status_neopixel, 1, brightness=0.2)
         elif isinstance(status_neopixel, neopixel.NeoPixel):
