@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 import time
+
 import adafruit_fruitjam
 
 pobj = adafruit_fruitjam.peripherals.Peripherals()
