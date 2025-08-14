@@ -1,7 +1,0 @@
-Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: Adafruit CircuitPython FruitJam
-Source: https://github.com/adafruit/Adafruit_CircuitPython_FruitJam
-
-Files: examples/wav/*.wav
-Copyright: 2025 Adafruit
-License: CC-BY-4.0
