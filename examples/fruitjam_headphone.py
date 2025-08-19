@@ -5,21 +5,16 @@ import time
 
 import adafruit_fruitjam
 
-pobj = adafruit_fruitjam.peripherals.Peripherals()
-dac = pobj.dac  # use Fruit Jam's codec
-
-# Route once for headphones
-dac.headphone_output = True
-dac.speaker_output = False
+pobj = adafruit_fruitjam.peripherals.Peripherals(audio_output="headphone")
 
 FILES = ["beep.wav", "dip.wav", "rise.wav"]
-VOLUMES_DB = [12, 6, 0, -6, -12]
+VOLUMES = [5, 7, 10, 12, 15]
 
 while True:
     print("\n=== Headphones Test ===")
-    for vol in VOLUMES_DB:
-        dac.dac_volume = vol
-        print(f"Headphones volume: {vol} dB")
+    for vol in VOLUMES:
+        pobj.volume = vol
+        print(f"Headphones volume: {vol}")
         for f in FILES:
             print(f"  -> {f}")
             pobj.play_file(f)
