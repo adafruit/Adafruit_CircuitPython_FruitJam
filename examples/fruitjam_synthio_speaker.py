@@ -17,7 +17,7 @@ while True:
     print("\n=== Synthio Test ===")
     for vol in VOLUMES:
         pobj.volume = vol
-        print(f"Speaker volume: {vol}")
+        print(f"Volume: {vol}")
         for note in C_major_scale:
             synth.press(note)
             time.sleep(0.1)
