@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 Tim Cocks for Adafruit Industries
+#
+# SPDX-License-Identifier: MIT
+# Wi-Fi settings (required)
+CIRCUITPY_WIFI_SSID = "YourSSID"
+CIRCUITPY_WIFI_PASSWORD = "YourPassword"
+
+# Time zone offset in hours relative to UTC (default 0 if not set)
+# Examples:
+#   0   = UTC (Zulu)
+#   1   = CET (Central European Time)
+#   2   = EET (Eastern European Time)
+#   3   = FET (Further Eastern European Time)
+#  -5   = EST (Eastern Standard Time)
+#  -6   = CST (Central Standard Time)
+#  -7   = MST (Mountain Standard Time)
+#  -8   = PST (Pacific Standard Time)
+#  -9   = AKST (Alaska Standard Time)
+# -10   = HST (Hawaii Standard Time, no DST)
+NTP_SERVER   = "pool.ntp.org"
+NTP_TZ       = -5
+NTP_DST      = 1
+NTP_INTERVAL = 3600
