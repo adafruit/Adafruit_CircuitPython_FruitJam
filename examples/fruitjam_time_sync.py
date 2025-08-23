@@ -1,10 +1,11 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025 Tim Cocks for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
-#
-# see examples/settings.toml for NTP_ options
-#
-from adafruit_fruitjam.ntp import sync_time
+import time
 
-now, next_sync = sync_time()
+from adafruit_fruitjam import FruitJam
+
+fj = FruitJam()
+now = fj.sync_time()
 print("RTC set:", now)
+print("Localtime:", time.localtime())

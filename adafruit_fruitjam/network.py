@@ -25,9 +25,13 @@ Implementation Notes
 """
 
 import gc
+import os
 
+import adafruit_connection_manager as acm
+import adafruit_ntp
 import microcontroller
 import neopixel
+import rtc
 from adafruit_portalbase.network import (
     CONTENT_IMAGE,
     CONTENT_JSON,
@@ -209,3 +213,86 @@ class Network(NetworkBase):
             gc.collect()
 
         return filename, position
+
+    def sync_time(self, server=None, tz_offset=None, tuning=None):
+        """
+        Set the system RTC via NTP using this Network's Wi-Fi connection.
+
+        Reads optional settings from settings.toml:
+          NTP_SERVER         (default "pool.ntp.org")
+          NTP_TZ             (float hours from UTC, default 0)
+          NTP_DST            (additional offset, usually 0 or 1)
+          NTP_TIMEOUT        (seconds, default 5.0)
+          NTP_CACHE_SECONDS  (default 0 = always fetch fresh)
+          NTP_REQUIRE_YEAR   (minimum acceptable year, default 2022)
+
+        Keyword args:
+          server (str)        – override NTP_SERVER
+          tz_offset (float)   – override NTP_TZ (+ NTP_DST still applied)
+          tuning (dict)       – override other knobs:
+                                {"timeout": 5.0,
+                                 "cache_seconds": 0,
+                                 "require_year": 2022}
+
+        Returns:
+          time.struct_time
+        """
+        # Bring up Wi-Fi using the existing flow.
+        self.connect()
+
+        # Build a socket pool from the existing ESP interface.
+        pool = acm.get_radio_socketpool(self._wifi.esp)
+
+        # Settings with environment fallbacks.
+        server = server or os.getenv("NTP_SERVER") or "pool.ntp.org"
+
+        if tz_offset is None:
+            tz_env = os.getenv("NTP_TZ")
+            try:
+                tz_offset = float(tz_env) if tz_env not in {None, ""} else 0.0
+            except Exception:
+                tz_offset = 0.0
+
+        # Simple DST additive offset (no IANA time zone logic).
+        try:
+            dst = float(os.getenv("NTP_DST") or 0)
+        except Exception:
+            dst = 0.0
+        tz_offset += dst
+
+        # Optional tuning (env can override passed defaults).
+        t = tuning or {}
+
+        def _f(name, default):
+            v = os.getenv(name)
+            try:
+                return float(v) if v not in {None, ""} else float(default)
+            except Exception:
+                return float(default)
+
+        def _i(name, default):
+            v = os.getenv(name)
+            try:
+                return int(v) if v not in {None, ""} else int(default)
+            except Exception:
+                return int(default)
+
+        timeout = float(t.get("timeout", _f("NTP_TIMEOUT", 5.0)))
+        cache_seconds = int(t.get("cache_seconds", _i("NTP_CACHE_SECONDS", 0)))
+        require_year = int(t.get("require_year", _i("NTP_REQUIRE_YEAR", 2022)))
+
+        # Query NTP and set the system RTC.
+        ntp = adafruit_ntp.NTP(
+            pool,
+            server=server,
+            tz_offset=tz_offset,
+            socket_timeout=timeout,
+            cache_seconds=cache_seconds,
+        )
+        now = ntp.datetime  # struct_time
+
+        if now.tm_year < require_year:
+            raise RuntimeError("NTP returned an unexpected year; not setting RTC")
+
+        rtc.RTC().datetime = now
+        return now

@@ -245,6 +245,23 @@ class FruitJam(PortalBase):
 
         gc.collect()
 
+    def sync_time(self, **kwargs):
+        """Set the system RTC via NTP using this FruitJam's Network.
+
+        This is a convenience wrapper for ``self.network.sync_time(...)`` so
+        user code can simply call ``fruitjam.sync_time()``.
+
+        Keyword args are passed through to ``Network.sync_time``:
+          - server (str)         : NTP host (default from NTP_SERVER or pool.ntp.org)
+          - tz_offset (float)    : hours from UTC (default from NTP_TZ + NTP_DST)
+          - timeout (float)      : socket timeout seconds (default from NTP_TIMEOUT or 5.0)
+          - cache_seconds (int)  : NTP cache seconds (default from NTP_CACHE_SECONDS or 0)
+          - require_year (int)   : sanity check lower bound (default 2022)
+        Returns:
+          time.struct_time
+        """
+        return self.network.sync_time(**kwargs)
+
     def set_caption(self, caption_text, caption_position, caption_color):
         """A caption. Requires setting ``caption_font`` in init!
 
