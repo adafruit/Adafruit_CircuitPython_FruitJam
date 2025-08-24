@@ -33,6 +33,9 @@ autodoc_mock_imports = [
     "audiocore",
     "storage",
     "terminalio",
+    "adafruit_connection_manager",
+    "adafruit_ntp",
+    "rtc",
 ]
 
 autodoc_preserve_defaults = True

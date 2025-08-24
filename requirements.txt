@@ -13,3 +13,5 @@ adafruit-circuitpython-requests
 adafruit-circuitpython-bitmap-font
 adafruit-circuitpython-display-text
 adafruit-circuitpython-sd
+adafruit-circuitpython-ntp
+adafruit-circuitpython-connectionmanager
