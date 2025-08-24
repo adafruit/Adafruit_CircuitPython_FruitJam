@@ -289,7 +289,26 @@ class Network(NetworkBase):
             socket_timeout=timeout,
             cache_seconds=cache_seconds,
         )
-        now = ntp.datetime  # struct_time
+
+        # Query NTP and set the system RTC.
+        ntp = adafruit_ntp.NTP(
+            pool,
+            server=server,
+            tz_offset=tz_offset,
+            socket_timeout=timeout,
+            cache_seconds=cache_seconds,
+        )
+
+        try:
+            now = ntp.datetime  # struct_time
+        except OSError as e:
+            # Retry once in case of transient ETIMEDOUT, after forcing reconnect.
+            if getattr(e, "errno", None) == 116 or "ETIMEDOUT" in str(e):
+                # Ensure radio is up again
+                self.connect()
+                now = ntp.datetime
+            else:
+                raise
 
         if now.tm_year < require_year:
             raise RuntimeError("NTP returned an unexpected year; not setting RTC")
