@@ -224,8 +224,7 @@ class Network(NetworkBase):
           NTP_SERVER        – NTP host (default: "pool.ntp.org")
           NTP_TZ            – timezone offset in hours (float, default: 0)
           NTP_DST           – extra offset for daylight saving (0=no, 1=yes; default: 0)
-          NTP_INTERVAL      – re-sync interval in seconds (default: 3600, not used internally,
-                               but available for user loop scheduling)
+          NTP_INTERVAL      – re-sync interval in seconds (default: 3600, not used internally)
 
           NTP_TIMEOUT       – socket timeout per attempt (seconds, default: 5.0)
           NTP_CACHE_SECONDS – cache results, 0 = always fetch fresh (default: 0)
@@ -249,86 +248,100 @@ class Network(NetworkBase):
         Returns:
           time.struct_time
         """
-        # Bring up Wi-Fi using the existing flow.
+        # Ensure Wi-Fi up
         self.connect()
 
-        # Build a socket pool from the existing ESP interface.
+        # Socket pool
         pool = acm.get_radio_socketpool(self._wifi.esp)
 
-        # Settings with environment fallbacks.
+        # Settings & overrides
         server = server or os.getenv("NTP_SERVER") or "pool.ntp.org"
-
-        if tz_offset is None:
-            tz_env = os.getenv("NTP_TZ")
-            try:
-                tz_offset = float(tz_env) if tz_env not in {None, ""} else 0.0
-            except Exception:
-                tz_offset = 0.0
-
-        # Simple DST additive offset (no IANA time zone logic).
-        try:
-            dst = float(os.getenv("NTP_DST") or 0)
-        except Exception:
-            dst = 0.0
-        tz_offset += dst
-
-        # Optional tuning (env can override passed defaults).
+        tz = tz_offset if tz_offset is not None else _combined_tz_offset(0.0)
         t = tuning or {}
 
-        def _f(name, default):
-            v = os.getenv(name)
-            try:
-                return float(v) if v not in {None, ""} else float(default)
-            except Exception:
-                return float(default)
+        timeout = float(t.get("timeout", _get_float_env("NTP_TIMEOUT", 5.0)))
+        cache_seconds = int(t.get("cache_seconds", _get_int_env("NTP_CACHE_SECONDS", 0)))
+        require_year = int(t.get("require_year", _get_int_env("NTP_REQUIRE_YEAR", 2022)))
+        ntp_retries = int(t.get("retries", _get_int_env("NTP_RETRIES", 8)))
+        ntp_delay_s = float(t.get("retry_delay", _get_float_env("NTP_DELAY_S", 1.0)))
 
-        def _i(name, default):
-            v = os.getenv(name)
-            try:
-                return int(v) if v not in {None, ""} else int(default)
-            except Exception:
-                return int(default)
-
-        timeout = float(t.get("timeout", _f("NTP_TIMEOUT", 5.0)))
-        cache_seconds = int(t.get("cache_seconds", _i("NTP_CACHE_SECONDS", 0)))
-        require_year = int(t.get("require_year", _i("NTP_REQUIRE_YEAR", 2022)))
-
-        # Query NTP and set the system RTC.
+        # NTP client
         ntp = adafruit_ntp.NTP(
             pool,
             server=server,
-            tz_offset=tz_offset,
+            tz_offset=tz,
             socket_timeout=timeout,
             cache_seconds=cache_seconds,
         )
 
-        # Multiple reply attempts on transient timeouts
-        ntp_retries = int(t.get("retries", _i("NTP_RETRIES", 8)))
-        ntp_delay_s = float(t.get("retry_delay", _f("NTP_DELAY_S", 1.0)))
+        # Attempt fetch (retries on timeout)
+        now = _ntp_get_datetime(
+            ntp,
+            connect_cb=self.connect,
+            retries=ntp_retries,
+            delay_s=ntp_delay_s,
+            debug=getattr(self, "_debug", False),
+        )
 
-        last_exc = None
-        for attempt in range(ntp_retries):
-            try:
-                now = ntp.datetime  # struct_time
-                break  # success
-            except OSError as e:
-                last_exc = e
-                # Only retry on timeout-like errors
-                if getattr(e, "errno", None) == 116 or "ETIMEDOUT" in str(e):
-                    # Reassert Wi-Fi via existing policy, then wait a bit
-                    self.connect()
-                    if self._debug:
-                        print("NTP timeout, retry", attempt + 1, "of", ntp_retries)
-                    time.sleep(ntp_delay_s)
-                    continue
-                # Non-timeout: don't spin
-                break
-
-        if last_exc and "now" not in locals():
-            raise last_exc
-
+        # Sanity check & commit
         if now.tm_year < require_year:
             raise RuntimeError("NTP returned an unexpected year; not setting RTC")
 
         rtc.RTC().datetime = now
         return now
+
+
+# ---- Internal helpers to keep sync_time() small and Ruff-friendly ----
+
+
+def _get_float_env(name, default):
+    v = os.getenv(name)
+    try:
+        return float(v) if v not in {None, ""} else float(default)
+    except Exception:
+        return float(default)
+
+
+def _get_int_env(name, default):
+    v = os.getenv(name)
+    if v in {None, ""}:
+        return int(default)
+    try:
+        return int(v)
+    except Exception:
+        try:
+            return int(float(v))  # tolerate "5.0"
+        except Exception:
+            return int(default)
+
+
+def _combined_tz_offset(base_default):
+    """Return tz offset hours including DST via env (NTP_TZ + NTP_DST)."""
+    tz = _get_float_env("NTP_TZ", base_default)
+    dst = _get_float_env("NTP_DST", 0)
+    return tz + dst
+
+
+def _ntp_get_datetime(ntp, connect_cb, retries, delay_s, debug=False):
+    """Fetch ntp.datetime with limited retries on timeout; re-connect between tries."""
+    last_exc = None
+    for i in range(retries):
+        last_exc = None
+        try:
+            return ntp.datetime  # struct_time
+        except OSError as e:
+            last_exc = e
+            is_timeout = (getattr(e, "errno", None) == 116) or ("ETIMEDOUT" in str(e))
+            if not is_timeout:
+                break
+            if debug:
+                print(f"NTP timeout, attempt {i + 1}/{retries}")
+            connect_cb()  # re-assert Wi-Fi using existing policy
+            time.sleep(delay_s)
+            continue
+        except Exception as e:
+            last_exc = e
+            break
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("NTP sync failed")
