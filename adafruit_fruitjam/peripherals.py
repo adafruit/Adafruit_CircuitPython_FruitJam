@@ -189,6 +189,7 @@ class Peripherals:
             except OSError:
                 # sdcard init or mounting failed
                 self._sd_mounted = False
+        self._mp3_decoder = None
 
     @property
     def button1(self) -> bool:
@@ -246,6 +247,19 @@ class Peripherals:
         while self.audio.playing:
             pass
         self.wavfile.close()
+
+    def play_mp3_file(self, filename):
+        with open(filename, "rb") as f:
+            if self._mp3_decoder is None:
+                from audiomp3 import MP3Decoder  # noqa: PLC0415, import outside top-level
+
+                self._mp3_decoder = MP3Decoder(f)
+            else:
+                self._mp3_decoder.file = f
+
+            self.audio.play(self._mp3_decoder)
+            while self.audio.playing:
+                pass
 
     def stop_play(self):
         """Stops playing a wav file."""
