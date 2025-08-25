@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2020 Melissa LeBlanc-Williams, written for Adafruit Industries
 # SPDX-FileCopyrightText: 2025 Tim Cocks, written for Adafruit Industries
+# SPDX-FileCopyrightText: 2025 Mikey Sklar, written for Adafruit Industries
 #
 # SPDX-License-Identifier: Unlicense
 """
@@ -324,7 +325,6 @@ def _combined_tz_offset(base_default):
 
 def _ntp_get_datetime(ntp, connect_cb, retries, delay_s, debug=False):
     """Fetch ntp.datetime with limited retries on timeout; re-connect between tries."""
-    last_exc = None
     for i in range(retries):
         last_exc = None
         try:

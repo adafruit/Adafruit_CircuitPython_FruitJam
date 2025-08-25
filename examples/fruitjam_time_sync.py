@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 Tim Cocks for Adafruit Industries
+# SPDX-FileCopyrightText: Copyright (c) 2025 Mikey Sklar for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
 import time

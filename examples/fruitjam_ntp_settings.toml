@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 Tim Cocks for Adafruit Industries
+# SPDX-FileCopyrightText: Copyright (c) 2025 Mikey Sklar for Adafruit Industries
 #
 # SPDX-License-Identifier: MIT
 # Wi-Fi credentials
@@ -24,10 +24,10 @@ NTP_DST      = 1                # daylight saving (0=no, 1=yes)
 NTP_INTERVAL = 3600             # re-sync interval (seconds)
 
 # Optional tuning
-NTP_TIMEOUT        = 5           # socket timeout in seconds
+NTP_TIMEOUT        = "1.0"       # socket timeout in seconds
 NTP_CACHE_SECONDS  = 0           # cache results (0 = always fetch)
 NTP_REQUIRE_YEAR   = 2022        # sanity check minimum year
 
 # Retries
-NTP_RETRIES   = 8     # number of NTP fetch attempts
-NTP_DELAY_S   = 1.0   # delay between attempts (seconds)
+NTP_RETRIES   = 8         # number of NTP fetch attempts
+NTP_DELAY_S   = "1.5"     # delay between attempts (seconds)
