@@ -26,6 +26,7 @@ Implementation Notes
 
 import gc
 import os
+import time
 
 import adafruit_connection_manager as acm
 import adafruit_ntp
@@ -219,20 +220,31 @@ class Network(NetworkBase):
         Set the system RTC via NTP using this Network's Wi-Fi connection.
 
         Reads optional settings from settings.toml:
-          NTP_SERVER         (default "pool.ntp.org")
-          NTP_TZ             (float hours from UTC, default 0)
-          NTP_DST            (additional offset, usually 0 or 1)
-          NTP_TIMEOUT        (seconds, default 5.0)
-          NTP_CACHE_SECONDS  (default 0 = always fetch fresh)
-          NTP_REQUIRE_YEAR   (minimum acceptable year, default 2022)
+
+          NTP_SERVER        – NTP host (default: "pool.ntp.org")
+          NTP_TZ            – timezone offset in hours (float, default: 0)
+          NTP_DST           – extra offset for daylight saving (0=no, 1=yes; default: 0)
+          NTP_INTERVAL      – re-sync interval in seconds (default: 3600, not used internally,
+                               but available for user loop scheduling)
+
+          NTP_TIMEOUT       – socket timeout per attempt (seconds, default: 5.0)
+          NTP_CACHE_SECONDS – cache results, 0 = always fetch fresh (default: 0)
+          NTP_REQUIRE_YEAR  – minimum acceptable year (default: 2022)
+
+          NTP_RETRIES       – number of NTP fetch attempts on timeout (default: 8)
+          NTP_DELAY_S       – delay between retries in seconds (default: 1.0)
 
         Keyword args:
           server (str)        – override NTP_SERVER
           tz_offset (float)   – override NTP_TZ (+ NTP_DST still applied)
-          tuning (dict)       – override other knobs:
-                                {"timeout": 5.0,
-                                 "cache_seconds": 0,
-                                 "require_year": 2022}
+          tuning (dict)       – override tuning knobs, e.g.:
+                                {
+                                    "timeout": 5.0,
+                                    "cache_seconds": 0,
+                                    "require_year": 2022,
+                                    "retries": 8,
+                                    "retry_delay": 1.0,
+                                }
 
         Returns:
           time.struct_time
@@ -290,25 +302,30 @@ class Network(NetworkBase):
             cache_seconds=cache_seconds,
         )
 
-        # Query NTP and set the system RTC.
-        ntp = adafruit_ntp.NTP(
-            pool,
-            server=server,
-            tz_offset=tz_offset,
-            socket_timeout=timeout,
-            cache_seconds=cache_seconds,
-        )
+        # Multiple reply attempts on transient timeouts
+        ntp_retries = int(t.get("retries", _i("NTP_RETRIES", 8)))
+        ntp_delay_s = float(t.get("retry_delay", _f("NTP_DELAY_S", 1.0)))
 
-        try:
-            now = ntp.datetime  # struct_time
-        except OSError as e:
-            # Retry once in case of transient ETIMEDOUT, after forcing reconnect.
-            if getattr(e, "errno", None) == 116 or "ETIMEDOUT" in str(e):
-                # Ensure radio is up again
-                self.connect()
-                now = ntp.datetime
-            else:
-                raise
+        last_exc = None
+        for attempt in range(ntp_retries):
+            try:
+                now = ntp.datetime  # struct_time
+                break  # success
+            except OSError as e:
+                last_exc = e
+                # Only retry on timeout-like errors
+                if getattr(e, "errno", None) == 116 or "ETIMEDOUT" in str(e):
+                    # Reassert Wi-Fi via existing policy, then wait a bit
+                    self.connect()
+                    if self._debug:
+                        print("NTP timeout, retry", attempt + 1, "of", ntp_retries)
+                    time.sleep(ntp_delay_s)
+                    continue
+                # Non-timeout: don't spin
+                break
+
+        if last_exc and "now" not in locals():
+            raise last_exc
 
         if now.tm_year < require_year:
             raise RuntimeError("NTP returned an unexpected year; not setting RTC")

@@ -27,3 +27,7 @@ NTP_INTERVAL = 3600             # re-sync interval (seconds)
 NTP_TIMEOUT        = 5           # socket timeout in seconds
 NTP_CACHE_SECONDS  = 0           # cache results (0 = always fetch)
 NTP_REQUIRE_YEAR   = 2022        # sanity check minimum year
+
+# Retries
+NTP_RETRIES   = 8     # number of NTP fetch attempts
+NTP_DELAY_S   = 1.0   # delay between attempts (seconds)
