@@ -8,7 +8,7 @@ import adafruit_fruitjam
 pobj = adafruit_fruitjam.peripherals.Peripherals(audio_output="headphone")
 
 FILES = ["beep.wav", "dip.wav", "rise.wav"]
-VOLUMES = [5, 7, 10, 12, 15]
+VOLUMES = [5, 7, 10, 11, 12]
 
 while True:
     print("\n=== Headphones Test ===")

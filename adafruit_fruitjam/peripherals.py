@@ -143,7 +143,7 @@ class Peripherals:
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(self, audio_output="headphone", safe_volume_limit=15):
+    def __init__(self, audio_output="headphone", safe_volume_limit=12):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 
         self._buttons = []
@@ -281,7 +281,7 @@ class Peripherals:
                 f"Volume level must be less than or equal to "
                 + f"safe_volume_limit: {self.safe_volume_limit}. "
                 + f"Using higher values could damage speakers. "
-                + f"To override this limitation pass a value larger than 15 "
+                + f"To override this limitation pass a value larger {self.safe_volume_limit} "
                 + f"for the safe_volume_limit argument of the constructor."
             )
 
