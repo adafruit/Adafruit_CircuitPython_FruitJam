@@ -159,6 +159,7 @@ class Peripherals:
         # set sample rate & bit depth
         self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
 
+        self._audio_output = audio_output
         self.audio_output = audio_output
         self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
         if safe_volume_limit < 1 or safe_volume_limit > 20:
