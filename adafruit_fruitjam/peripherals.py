@@ -165,7 +165,7 @@ class Peripherals:
         if safe_volume_limit < 1 or safe_volume_limit > 20:
             raise ValueError("safe_volume_limit must be between 1 and 20")
         self.safe_volume_limit = safe_volume_limit
-        self._volume = 13
+        self._volume = 7
         self._apply_volume()
 
         self._sd_mounted = False
