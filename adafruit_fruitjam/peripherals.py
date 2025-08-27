@@ -273,7 +273,7 @@ class Peripherals:
         :param volume_level: new volume level 1-20
         :return: None
         """
-        if volume_level < 1 or volume_level > 20:
+        if not (1 <= volume_level <= 20):
             raise ValueError("Volume level must be between 1 and 20")
 
         if volume_level > self.safe_volume_limit:
