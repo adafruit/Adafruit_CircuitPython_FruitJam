@@ -40,6 +40,7 @@ import framebufferio
 import picodvi
 import storage
 import supervisor
+from adafruit_simplemath import map_range
 from digitalio import DigitalInOut, Direction, Pull
 from neopixel import NeoPixel
 
@@ -133,13 +134,16 @@ def get_display_config():
 class Peripherals:
     """Peripherals Helper Class for the FruitJam Library
 
+    :param audio_output: The audio output interface to use 'speaker' or 'headphone'
+    :param safe_volume_limit: The maximum volume allowed for the audio output. Default is 15
+        Using higher values can damage some speakers, change at your own risk.
 
     Attributes:
         neopixels (NeoPxiels): The NeoPixels on the Fruit Jam board.
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(self):
+    def __init__(self, audio_output="headphone", safe_volume_limit=12):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 
         self._buttons = []
@@ -155,11 +159,14 @@ class Peripherals:
         # set sample rate & bit depth
         self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
 
-        # use headphones
-        self._dac.headphone_output = True
-        self._dac.headphone_volume = -15  # dB
-
+        self._audio_output = audio_output
+        self.audio_output = audio_output
         self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
+        if safe_volume_limit < 1 or safe_volume_limit > 20:
+            raise ValueError("safe_volume_limit must be between 1 and 20")
+        self.safe_volume_limit = safe_volume_limit
+        self._volume = 7
+        self._apply_volume()
 
         self._sd_mounted = False
         sd_pins_in_use = False
@@ -266,3 +273,61 @@ class Peripherals:
         self.audio.stop()
         if self.wavfile is not None:
             self.wavfile.close()
+
+    @property
+    def volume(self) -> int:
+        """
+        The volume level of the Fruit Jam audio output. Valid values are 1-20.
+        """
+        return self._volume
+
+    @volume.setter
+    def volume(self, volume_level: int) -> None:
+        """
+        :param volume_level: new volume level 1-20
+        :return: None
+        """
+        if not (1 <= volume_level <= 20):
+            raise ValueError("Volume level must be between 1 and 20")
+
+        if volume_level > self.safe_volume_limit:
+            raise ValueError(
+                f"""Volume level must be less than or equal to
+safe_volume_limit: {self.safe_volume_limit}. Using higher values could damage speakers.
+To override this limitation set a larger value than {self.safe_volume_limit}
+for the safe_volume_limit with the constructor or property."""
+            )
+
+        self._volume = volume_level
+        self._apply_volume()
+
+    @property
+    def audio_output(self) -> str:
+        """
+        The audio output interface. 'speaker' or 'headphone'
+        :return:
+        """
+        return self._audio_output
+
+    @audio_output.setter
+    def audio_output(self, audio_output: str) -> None:
+        """
+
+        :param audio_output: The audio interface to use 'speaker' or 'headphone'.
+        :return: None
+        """
+        if audio_output == "headphone":
+            self._dac.headphone_output = True
+            self._dac.speaker_output = False
+        elif audio_output == "speaker":
+            self._dac.headphone_output = False
+            self._dac.speaker_output = True
+        else:
+            raise ValueError("audio_output must be either 'headphone' or 'speaker'")
+
+    def _apply_volume(self) -> None:
+        """
+        Map the basic volume level to a db value and set it on the DAC.
+        """
+        db_val = map_range(self._volume, 1, 20, -63, 23)
+        self._dac.dac_volume = db_val

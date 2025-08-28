@@ -195,6 +195,8 @@ class FruitJam(PortalBase):
         self.play_file = self.peripherals.play_file
         self.play_mp3_file = self.peripherals.play_mp3_file
         self.stop_play = self.peripherals.stop_play
+        self.volume = self.peripherals.volume
+        self.audio_output = self.peripherals.audio_output
 
         self.image_converter_url = self.network.image_converter_url
         self.wget = self.network.wget
@@ -245,6 +247,26 @@ class FruitJam(PortalBase):
             self._text = None
 
         gc.collect()
+
+    def sync_time(self, **kwargs):
+        """Set the system RTC via NTP using this FruitJam's Network.
+
+        This is a convenience wrapper for ``self.network.sync_time(...)``.
+
+        :param str server: Override NTP host (defaults to ``NTP_SERVER`` or
+            ``"pool.ntp.org"`` if unset).  (Pass via ``server=...`` in kwargs.)
+        :param float tz_offset: Override hours from UTC (defaults to ``NTP_TZ``;
+            ``NTP_DST`` is still added).  (Pass via ``tz_offset=...``.)
+        :param dict tuning: Advanced options dict (optional). Supported keys:
+            ``timeout`` (float, socket timeout seconds; defaults to ``NTP_TIMEOUT`` or 5.0),
+            ``cache_seconds`` (int; defaults to ``NTP_CACHE_SECONDS`` or 0),
+            ``require_year`` (int; defaults to ``NTP_REQUIRE_YEAR`` or 2022).
+            (Pass via ``tuning={...}``.)
+
+        :returns: Synced time
+        :rtype: time.struct_time
+        """
+        return self.network.sync_time(**kwargs)
 
     def set_caption(self, caption_text, caption_position, caption_color):
         """A caption. Requires setting ``caption_font`` in init!

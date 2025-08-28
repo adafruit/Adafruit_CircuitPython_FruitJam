@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2020 Melissa LeBlanc-Williams, written for Adafruit Industries
 # SPDX-FileCopyrightText: 2025 Tim Cocks, written for Adafruit Industries
+# SPDX-FileCopyrightText: 2025 Mikey Sklar, written for Adafruit Industries
 #
 # SPDX-License-Identifier: Unlicense
 """
@@ -25,9 +26,14 @@ Implementation Notes
 """
 
 import gc
+import os
+import time
 
+import adafruit_connection_manager as acm
+import adafruit_ntp
 import microcontroller
 import neopixel
+import rtc
 from adafruit_portalbase.network import (
     CONTENT_IMAGE,
     CONTENT_JSON,
@@ -209,3 +215,133 @@ class Network(NetworkBase):
             gc.collect()
 
         return filename, position
+
+    def sync_time(self, server=None, tz_offset=None, tuning=None):
+        """
+        Set the system RTC via NTP using this Network's Wi-Fi connection.
+
+        Reads optional settings from settings.toml:
+
+          NTP_SERVER        – NTP host (default: "pool.ntp.org")
+          NTP_TZ            – timezone offset in hours (float, default: 0)
+          NTP_DST           – extra offset for daylight saving (0=no, 1=yes; default: 0)
+          NTP_INTERVAL      – re-sync interval in seconds (default: 3600, not used internally)
+
+          NTP_TIMEOUT       – socket timeout per attempt (seconds, default: 5.0)
+          NTP_CACHE_SECONDS – cache results, 0 = always fetch fresh (default: 0)
+          NTP_REQUIRE_YEAR  – minimum acceptable year (default: 2022)
+
+          NTP_RETRIES       – number of NTP fetch attempts on timeout (default: 8)
+          NTP_DELAY_S       – delay between retries in seconds (default: 1.0)
+
+        Keyword args:
+          server (str)        – override NTP_SERVER
+          tz_offset (float)   – override NTP_TZ (+ NTP_DST still applied)
+          tuning (dict)       – override tuning knobs, e.g.:
+                                {
+                                    "timeout": 5.0,
+                                    "cache_seconds": 0,
+                                    "require_year": 2022,
+                                    "retries": 8,
+                                    "retry_delay": 1.0,
+                                }
+
+        Returns:
+          time.struct_time
+        """
+        # Ensure Wi-Fi up
+        self.connect()
+
+        # Socket pool
+        pool = acm.get_radio_socketpool(self._wifi.esp)
+
+        # Settings & overrides
+        server = server or os.getenv("NTP_SERVER") or "pool.ntp.org"
+        tz = tz_offset if tz_offset is not None else _combined_tz_offset(0.0)
+        t = tuning or {}
+
+        timeout = float(t.get("timeout", _get_float_env("NTP_TIMEOUT", 5.0)))
+        cache_seconds = int(t.get("cache_seconds", _get_int_env("NTP_CACHE_SECONDS", 0)))
+        require_year = int(t.get("require_year", _get_int_env("NTP_REQUIRE_YEAR", 2022)))
+        ntp_retries = int(t.get("retries", _get_int_env("NTP_RETRIES", 8)))
+        ntp_delay_s = float(t.get("retry_delay", _get_float_env("NTP_DELAY_S", 1.0)))
+
+        # NTP client
+        ntp = adafruit_ntp.NTP(
+            pool,
+            server=server,
+            tz_offset=tz,
+            socket_timeout=timeout,
+            cache_seconds=cache_seconds,
+        )
+
+        # Attempt fetch (retries on timeout)
+        now = _ntp_get_datetime(
+            ntp,
+            connect_cb=self.connect,
+            retries=ntp_retries,
+            delay_s=ntp_delay_s,
+            debug=getattr(self, "_debug", False),
+        )
+
+        # Sanity check & commit
+        if now.tm_year < require_year:
+            raise RuntimeError("NTP returned an unexpected year; not setting RTC")
+
+        rtc.RTC().datetime = now
+        return now
+
+
+# ---- Internal helpers to keep sync_time() small and Ruff-friendly ----
+
+
+def _get_float_env(name, default):
+    v = os.getenv(name)
+    try:
+        return float(v) if v not in {None, ""} else float(default)
+    except Exception:
+        return float(default)
+
+
+def _get_int_env(name, default):
+    v = os.getenv(name)
+    if v in {None, ""}:
+        return int(default)
+    try:
+        return int(v)
+    except Exception:
+        try:
+            return int(float(v))  # tolerate "5.0"
+        except Exception:
+            return int(default)
+
+
+def _combined_tz_offset(base_default):
+    """Return tz offset hours including DST via env (NTP_TZ + NTP_DST)."""
+    tz = _get_float_env("NTP_TZ", base_default)
+    dst = _get_float_env("NTP_DST", 0)
+    return tz + dst
+
+
+def _ntp_get_datetime(ntp, connect_cb, retries, delay_s, debug=False):
+    """Fetch ntp.datetime with limited retries on timeout; re-connect between tries."""
+    for i in range(retries):
+        last_exc = None
+        try:
+            return ntp.datetime  # struct_time
+        except OSError as e:
+            last_exc = e
+            is_timeout = (getattr(e, "errno", None) == 116) or ("ETIMEDOUT" in str(e))
+            if not is_timeout:
+                break
+            if debug:
+                print(f"NTP timeout, attempt {i + 1}/{retries}")
+            connect_cb()  # re-assert Wi-Fi using existing policy
+            time.sleep(delay_s)
+            continue
+        except Exception as e:
+            last_exc = e
+            break
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("NTP sync failed")
