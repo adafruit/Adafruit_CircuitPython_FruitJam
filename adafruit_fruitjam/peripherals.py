@@ -279,10 +279,9 @@ class Peripherals:
         if volume_level > self.safe_volume_limit:
             raise ValueError(
                 f"""Volume level must be less than or equal to
-safe_volume_limit: {self.safe_volume_limit}.
-Using higher values could damage speakers.
-To override this limitation pass a value larger {self.safe_volume_limit}
-for the safe_volume_limit argument of the constructor."""
+safe_volume_limit: {self.safe_volume_limit}. Using higher values could damage speakers.
+To override this limitation set a larger value than {self.safe_volume_limit}
+for the safe_volume_limit with the constructor or property."""
             )
 
         self._volume = volume_level
