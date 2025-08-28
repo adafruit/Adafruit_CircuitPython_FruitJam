@@ -193,6 +193,7 @@ class FruitJam(PortalBase):
 
         self.sd_check = self.peripherals.sd_check
         self.play_file = self.peripherals.play_file
+        self.play_mp3_file = self.peripherals.play_mp3_file
         self.stop_play = self.peripherals.stop_play
         self.volume = self.peripherals.volume
         self.audio_output = self.peripherals.audio_output
