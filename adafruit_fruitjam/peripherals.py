@@ -38,9 +38,9 @@ import digitalio
 import displayio
 import framebufferio
 import picodvi
-import simpleio
 import storage
 import supervisor
+from adafruit_simplemath import map_range
 from digitalio import DigitalInOut, Direction, Pull
 from neopixel import NeoPixel
 
@@ -278,11 +278,11 @@ class Peripherals:
 
         if volume_level > self.safe_volume_limit:
             raise ValueError(
-                f"Volume level must be less than or equal to "
-                + f"safe_volume_limit: {self.safe_volume_limit}. "
-                + f"Using higher values could damage speakers. "
-                + f"To override this limitation pass a value larger {self.safe_volume_limit} "
-                + f"for the safe_volume_limit argument of the constructor."
+                f"""Volume level must be less than or equal to
+safe_volume_limit: {self.safe_volume_limit}.
+Using higher values could damage speakers.
+To override this limitation pass a value larger {self.safe_volume_limit}
+for the safe_volume_limit argument of the constructor."""
             )
 
         self._volume = volume_level
@@ -316,5 +316,5 @@ class Peripherals:
         """
         Map the basic volume level to a db value and set it on the DAC.
         """
-        db_val = simpleio.map_range(self._volume, 1, 20, -63, 23)
+        db_val = map_range(self._volume, 1, 20, -63, 23)
         self._dac.dac_volume = db_val
