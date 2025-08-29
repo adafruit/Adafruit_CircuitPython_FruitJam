@@ -143,9 +143,16 @@ class Peripherals:
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(self, audio_output="headphone", safe_volume_limit=17,
-        tlv_i2c=None, bclk=None, ws=None, din=None):
-
+    def __init__(  # noqa: PLR0913 Too many arguments in function definition
+        self,
+        audio_output="headphone",
+        safe_volume_limit=17,
+        *,
+        tlv_i2c=None,
+        bclk=None,
+        ws=None,
+        din=None,
+    ):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 
         self._buttons = []
@@ -163,7 +170,7 @@ class Peripherals:
 
         # set sample rate & bit depth
         self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
-            
+
         self._audio_output = audio_output
         self.audio_output = audio_output
 
