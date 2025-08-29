@@ -143,7 +143,9 @@ class Peripherals:
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(self, audio_output="headphone", safe_volume_limit=12):
+    def __init__(self, audio_output="headphone", safe_volume_limit=17,
+        tlv_i2c=None, bclk=None, ws=None, din=None):
+
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 
         self._buttons = []
@@ -153,15 +155,25 @@ class Peripherals:
             switch.pull = Pull.UP
             self._buttons.append(switch)
 
-        i2c = board.I2C()
+        if tlv_i2c:
+            i2c = tlv_i2c
+        else:
+            i2c = board.I2C()
         self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
 
         # set sample rate & bit depth
         self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
-
+            
         self._audio_output = audio_output
         self.audio_output = audio_output
-        self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
+
+        # If any of the pins have been left undefined, use the Fruit Jam pins
+        if not bclk or not ws or not din:
+            bclk = board.I2S_BCLK
+            ws = board.I2S_WS
+            din = board.I2S_DIN
+        self._audio = audiobusio.I2SOut(bclk, ws, din)
+
         if safe_volume_limit < 1 or safe_volume_limit > 20:
             raise ValueError("safe_volume_limit must be between 1 and 20")
         self.safe_volume_limit = safe_volume_limit
@@ -327,6 +339,7 @@ for the safe_volume_limit with the constructor or property."""
     def _apply_volume(self) -> None:
         """
         Map the basic volume level to a db value and set it on the DAC.
+        An input volume level of 14.65 will result in a db_val of 0dB
         """
         db_val = map_range(self._volume, 1, 20, -63, 23)
         self._dac.dac_volume = db_val
