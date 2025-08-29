@@ -137,13 +137,17 @@ class Peripherals:
     :param audio_output: The audio output interface to use 'speaker' or 'headphone'
     :param safe_volume_limit: The maximum volume allowed for the audio output. Default is 15
         Using higher values can damage some speakers, change at your own risk.
+    :param dac=None: DAC object to be used instead of the default FruitJam TLV320 object
+        If a DAC object is passed in the clocks must be configured by the calling program
+    :param i2s_audio=None: I2SOut object to be used instead of the default object built
+        using the default FruitJam I2S pins.
 
     Attributes:
         neopixels (NeoPxiels): The NeoPixels on the Fruit Jam board.
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(self, audio_output="headphone", safe_volume_limit=12):
+    def __init__(self, audio_output="headphone", safe_volume_limit=12, *, dac=None, i2s_audio=None):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 
         self._buttons = []
@@ -153,20 +157,33 @@ class Peripherals:
             switch.pull = Pull.UP
             self._buttons.append(switch)
 
-        i2c = board.I2C()
-        self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
+        # If a DAC object is passed in
+        # The clocks must be configured by the calling program
+        self._dac = dac
 
-        # set sample rate & bit depth
-        self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
+        if not self._dac:
+            i2c = board.I2C()
+            self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
 
-        self._audio_output = audio_output
-        self.audio_output = audio_output
-        self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
+            # set sample rate & bit depth
+            self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
+
+        # I know we're only really concerned about TLV320 DACs but this seems like an
+        # easy check to give the option of passing in objects from other DACs
+        if hasattr(self._dac, "headphone_output") and hasattr(self._dac, "speaker_output"):
+            self._audio_output = audio_output
+            self.audio_output = audio_output
+
+        self._audio = i2s_audio
+        if not self._audio:
+            self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
+
         if safe_volume_limit < 1 or safe_volume_limit > 20:
             raise ValueError("safe_volume_limit must be between 1 and 20")
         self.safe_volume_limit = safe_volume_limit
         self._volume = 7
-        self._apply_volume()
+        if hasattr(self._dac, "dac_volume"):
+            self._apply_volume()
 
         self._sd_mounted = False
         sd_pins_in_use = False
@@ -327,6 +344,7 @@ for the safe_volume_limit with the constructor or property."""
     def _apply_volume(self) -> None:
         """
         Map the basic volume level to a db value and set it on the DAC.
+        An input volume level of 14.65 will result in a db_val of 0dB
         """
         db_val = map_range(self._volume, 1, 20, -63, 23)
         self._dac.dac_volume = db_val
