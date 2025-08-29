@@ -143,16 +143,7 @@ class Peripherals:
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(  # noqa: PLR0913 Too many arguments in function definition
-        self,
-        audio_output="headphone",
-        safe_volume_limit=17,
-        *,
-        tlv_i2c=None,
-        bclk=None,
-        ws=None,
-        din=None,
-    ):
+    def __init__(self, audio_output="headphone", safe_volume_limit=12, *, dac=None, i2s_audio=None):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 
         self._buttons = []
@@ -162,30 +153,33 @@ class Peripherals:
             switch.pull = Pull.UP
             self._buttons.append(switch)
 
-        if tlv_i2c:
-            i2c = tlv_i2c
-        else:
+        # If a DAC object is passed in
+        # The clocks must be configured by the calling program
+        self._dac = dac
+
+        if not self._dac:
             i2c = board.I2C()
-        self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
+            self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
 
-        # set sample rate & bit depth
-        self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
+            # set sample rate & bit depth
+            self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
 
-        self._audio_output = audio_output
-        self.audio_output = audio_output
+        # I know we're only really concerned about TLV320 DACs but this seems like an
+        # easy check to give the option of passing in objects from other DACs
+        if hasattr(self._dac, "headphone_volume") and hasattr(self._dac, "speaker_volume"):
+            self._audio_output = audio_output
+            self.audio_output = audio_output
 
-        # If any of the pins have been left undefined, use the Fruit Jam pins
-        if not bclk or not ws or not din:
-            bclk = board.I2S_BCLK
-            ws = board.I2S_WS
-            din = board.I2S_DIN
-        self._audio = audiobusio.I2SOut(bclk, ws, din)
+        self._audio = i2s_audio
+        if not self._audio:
+            self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
 
         if safe_volume_limit < 1 or safe_volume_limit > 20:
             raise ValueError("safe_volume_limit must be between 1 and 20")
         self.safe_volume_limit = safe_volume_limit
         self._volume = 7
-        self._apply_volume()
+        if hasattr(self._dac, "dac_volume"):
+            self._apply_volume()
 
         self._sd_mounted = False
         sd_pins_in_use = False
