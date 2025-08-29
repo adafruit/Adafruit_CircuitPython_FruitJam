@@ -137,6 +137,10 @@ class Peripherals:
     :param audio_output: The audio output interface to use 'speaker' or 'headphone'
     :param safe_volume_limit: The maximum volume allowed for the audio output. Default is 15
         Using higher values can damage some speakers, change at your own risk.
+    :param dac=None: DAC object to be used instead of the default FruitJam TLV320 object
+        If a DAC object is passed in the clocks must be configured by the calling program
+    :param i2s_audio=None: I2SOut object to be used instead of the default object built
+        using the default FruitJam I2S pins.
 
     Attributes:
         neopixels (NeoPxiels): The NeoPixels on the Fruit Jam board.
