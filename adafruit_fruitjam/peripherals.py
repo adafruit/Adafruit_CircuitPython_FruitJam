@@ -170,7 +170,7 @@ class Peripherals:
 
         # I know we're only really concerned about TLV320 DACs but this seems like an
         # easy check to give the option of passing in objects from other DACs
-        if hasattr(self._dac, "headphone_volume") and hasattr(self._dac, "speaker_volume"):
+        if hasattr(self._dac, "headphone_output") and hasattr(self._dac, "speaker_output"):
             self._audio_output = audio_output
             self.audio_output = audio_output
 
