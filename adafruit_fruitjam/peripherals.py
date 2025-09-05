@@ -144,14 +144,16 @@ class Peripherals:
     """
 
     def __init__(self, audio_output="headphone", safe_volume_limit=12):
-        self.neopixels = NeoPixel(board.NEOPIXEL, 5)
+        self.neopixels = NeoPixel(board.NEOPIXEL, 5) if "NEOPIXEL" in dir(board) else None
 
-        self._buttons = []
-        for pin in (board.BUTTON1, board.BUTTON2, board.BUTTON3):
-            switch = DigitalInOut(pin)
-            switch.direction = Direction.INPUT
-            switch.pull = Pull.UP
-            self._buttons.append(switch)
+        self._buttons = None
+        if "BUTTON1" in dir(board) and "BUTTON2" in dir(board) and "BUTTON3" in dir(board):
+            self._buttons = [
+                DigitalInOut(pin) for pin in (board.BUTTON1, board.BUTTON2, board.BUTTON3)
+            ]
+            for switch in self._buttons:
+                switch.direction = Direction.INPUT
+                switch.pull = Pull.UP
 
         i2c = board.I2C()
         self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
@@ -203,28 +205,28 @@ class Peripherals:
         """
         Return whether Button 1 is pressed
         """
-        return not self._buttons[0].value
+        return self._buttons is not None and not self._buttons[0].value
 
     @property
     def button2(self) -> bool:
         """
         Return whether Button 2 is pressed
         """
-        return not self._buttons[1].value
+        return self._buttons is not None and not self._buttons[1].value
 
     @property
     def button3(self) -> bool:
         """
         Return whether Button 3 is pressed
         """
-        return not self._buttons[2].value
+        return self._buttons is not None and not self._buttons[2].value
 
     @property
     def any_button_pressed(self) -> bool:
         """
         Return whether any button is pressed
         """
-        return True in [not button.value for (i, button) in enumerate(self._buttons)]
+        return self._buttons is not None and True in [not button.value for button in self._buttons]
 
     @property
     def dac(self):
