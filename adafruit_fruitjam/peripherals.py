@@ -245,11 +245,11 @@ class Peripherals:
         return self._dac_present
 
     @property
-    def dac(self) -> adafruit_tlv320.TLV320DAC3100 | None:
+    def dac(self) -> adafruit_tlv320.TLV320DAC3100:
         return self._dac if self._dac_present else None
 
     @property
-    def audio(self) -> audiobusio.I2SOut | None:
+    def audio(self) -> audiobusio.I2SOut:
         return self._audio if self._dac_present else None
 
     def sd_check(self) -> bool:
