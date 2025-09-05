@@ -140,7 +140,7 @@ class Peripherals:
         Using higher values can damage some speakers, change at your own risk.
     :param sample_rate: The sample rate to play back audio data in hertz. Default is 11025.
     :param bit_depth: The bits per sample of the audio data. Supports 8 and 16 bits. Default is 16.
-    :param i2c: The I2C bus the audio DAC is connected to. Set as None to disable audio.
+    :param i2c: The I2C bus the audio DAC is connected to. Set as False to disable audio.
 
     Attributes:
         neopixels (NeoPxiels): The NeoPixels on the Fruit Jam board.
@@ -153,7 +153,7 @@ class Peripherals:
         safe_volume_limit: int = 12,
         sample_rate: int = 11025,
         bit_depth: int = 16,
-        i2c: busio.I2C = board.I2C(),
+        i2c: busio.I2C = None,
     ):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5)
 
@@ -164,13 +164,15 @@ class Peripherals:
             switch.pull = Pull.UP
             self._buttons.append(switch)
 
-        if i2c is not None:
+        if i2c is None:
+            i2c = board.I2C()
+        if i2c is not False:
             while not i2c.try_lock():
                 time.sleep(0.01)
             dac_present = 0x18 in i2c.scan()
             i2c.unlock()
 
-        if i2c is not None and dac_present:
+        if i2c is not False and dac_present:
             self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
 
             # set sample rate & bit depth
