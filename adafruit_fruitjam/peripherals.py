@@ -147,7 +147,7 @@ class Peripherals:
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0912
         self,
         audio_output: str = "headphone",
         safe_volume_limit: int = 12,
