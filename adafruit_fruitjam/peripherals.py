@@ -166,26 +166,25 @@ class Peripherals:
 
         if i2c is None:
             i2c = board.I2C()
-        if i2c is not False:
+        if i2c is False:
+            self._dac = None
+        else:
             while not i2c.try_lock():
                 time.sleep(0.01)
             dac_present = 0x18 in i2c.scan()
             i2c.unlock()
 
-        if i2c is not False and dac_present:
-            self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
+            if dac_present:
+                self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
+                self._dac.configure_clocks(  # set sample rate & bit depth
+                    sample_rate=sample_rate, bit_depth=bit_depth
+                )
+            else:
+                self._dac = None
 
-            # set sample rate & bit depth
-            self._dac.configure_clocks(sample_rate=sample_rate, bit_depth=bit_depth)
-
-            self._audio = (
-                audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
-                if "I2S_BCLK" in dir(board)
-                else None
-            )
-
+        if "I2S_BCLK" in dir(board) and "I2S_WS" in dir(board) and "I2S_DIN" in dir(board):
+            self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
         else:
-            self._dac = None
             self._audio = None
 
         if safe_volume_limit < 1 or safe_volume_limit > 20:
