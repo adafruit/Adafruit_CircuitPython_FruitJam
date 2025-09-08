@@ -27,6 +27,7 @@ Implementation Notes
 """
 
 import os
+import time
 
 import adafruit_sdcard
 import adafruit_tlv320
@@ -135,15 +136,25 @@ class Peripherals:
     """Peripherals Helper Class for the FruitJam Library
 
     :param audio_output: The audio output interface to use 'speaker' or 'headphone'
-    :param safe_volume_limit: The maximum volume allowed for the audio output. Default is 15
+    :param safe_volume_limit: The maximum volume allowed for the audio output. Default is 12.
         Using higher values can damage some speakers, change at your own risk.
+    :param sample_rate: The sample rate to play back audio data in hertz. Default is 11025.
+    :param bit_depth: The bits per sample of the audio data. Supports 8 and 16 bits. Default is 16.
+    :param i2c: The I2C bus the audio DAC is connected to. Set as False to disable audio.
 
     Attributes:
         neopixels (NeoPxiels): The NeoPixels on the Fruit Jam board.
             See https://circuitpython.readthedocs.io/projects/neopixel/en/latest/api.html
     """
 
-    def __init__(self, audio_output="headphone", safe_volume_limit=12):
+    def __init__(  # noqa: PLR0913, PLR0912
+        self,
+        audio_output: str = "headphone",
+        safe_volume_limit: int = 12,
+        sample_rate: int = 11025,
+        bit_depth: int = 16,
+        i2c: busio.I2C = None,
+    ):
         self.neopixels = NeoPixel(board.NEOPIXEL, 5) if "NEOPIXEL" in dir(board) else None
 
         self._buttons = None
@@ -155,20 +166,35 @@ class Peripherals:
                 switch.direction = Direction.INPUT
                 switch.pull = Pull.UP
 
-        i2c = board.I2C()
-        self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
+        if i2c is None:
+            i2c = board.I2C()
+        if i2c is False:
+            self._dac = None
+        else:
+            while not i2c.try_lock():
+                time.sleep(0.01)
+            dac_present = 0x18 in i2c.scan()
+            i2c.unlock()
 
-        # set sample rate & bit depth
-        self._dac.configure_clocks(sample_rate=11030, bit_depth=16)
+            if dac_present:
+                self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
+                self._dac.configure_clocks(  # set sample rate & bit depth
+                    sample_rate=sample_rate, bit_depth=bit_depth
+                )
+            else:
+                self._dac = None
 
-        self._audio_output = audio_output
-        self.audio_output = audio_output
-        self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
+        if "I2S_BCLK" in dir(board) and "I2S_WS" in dir(board) and "I2S_DIN" in dir(board):
+            self._audio = audiobusio.I2SOut(board.I2S_BCLK, board.I2S_WS, board.I2S_DIN)
+        else:
+            self._audio = None
+
         if safe_volume_limit < 1 or safe_volume_limit > 20:
             raise ValueError("safe_volume_limit must be between 1 and 20")
         self.safe_volume_limit = safe_volume_limit
-        self._volume = 7
-        self._apply_volume()
+
+        self.audio_output = audio_output
+        self._apply_volume(7)
 
         self._sd_mounted = False
         sd_pins_in_use = False
@@ -229,14 +255,31 @@ class Peripherals:
         return self._buttons is not None and True in [not button.value for button in self._buttons]
 
     @property
-    def dac(self):
+    def dac(self) -> adafruit_tlv320.TLV320DAC3100:
         return self._dac
 
+    @dac.setter
+    def dac(self, value: adafruit_tlv320.TLV320DAC3100) -> None:
+        if self._dac is not None:
+            self._dac.reset()
+            del self._dac
+        self._dac = value
+        self._apply_audio_output()
+        self._apply_volume()
+
     @property
-    def audio(self):
+    def audio(self) -> audiobusio.I2SOut:
         return self._audio
 
-    def sd_check(self):
+    @audio.setter
+    def audio(self, value: audiobusio.I2SOut) -> None:
+        if self._audio is not None:
+            self._audio.stop()
+            self._audio.deinit()
+            del self._audio
+        self._audio = value
+
+    def sd_check(self) -> bool:
         return self._sd_mounted
 
     def play_file(self, file_name, wait_to_finish=True):
@@ -246,34 +289,36 @@ class Peripherals:
         :param bool wait_to_finish: flag to determine if this is a blocking call
 
         """
-
-        # can't use `with` because we need wavefile to remain open after return
-        self.wavfile = open(file_name, "rb")
-        wavedata = audiocore.WaveFile(self.wavfile)
-        self.audio.play(wavedata)
-        if not wait_to_finish:
-            return
-        while self.audio.playing:
-            pass
-        self.wavfile.close()
+        if self._audio is not None:
+            # can't use `with` because we need wavefile to remain open after return
+            self.wavfile = open(file_name, "rb")
+            wavedata = audiocore.WaveFile(self.wavfile)
+            self._audio.play(wavedata)
+            if not wait_to_finish:
+                return
+            while self._audio.playing:
+                pass
+            self.wavfile.close()
 
     def play_mp3_file(self, filename):
-        if self._mp3_decoder is None:
-            from audiomp3 import MP3Decoder  # noqa: PLC0415, import outside top-level
+        if self._audio is not None:
+            if self._mp3_decoder is None:
+                from audiomp3 import MP3Decoder  # noqa: PLC0415, import outside top-level
 
-            self._mp3_decoder = MP3Decoder(filename)
-        else:
-            self._mp3_decoder.open(filename)
+                self._mp3_decoder = MP3Decoder(filename)
+            else:
+                self._mp3_decoder.open(filename)
 
-        self.audio.play(self._mp3_decoder)
-        while self.audio.playing:
-            pass
+            self._audio.play(self._mp3_decoder)
+            while self._audio.playing:
+                pass
 
     def stop_play(self):
         """Stops playing a wav file."""
-        self.audio.stop()
-        if self.wavfile is not None:
-            self.wavfile.close()
+        if self._audio is not None:
+            self._audio.stop()
+            if self.wavfile is not None:
+                self.wavfile.close()
 
     @property
     def volume(self) -> int:
@@ -299,8 +344,7 @@ To override this limitation set a larger value than {self.safe_volume_limit}
 for the safe_volume_limit with the constructor or property."""
             )
 
-        self._volume = volume_level
-        self._apply_volume()
+        self._apply_volume(volume_level)
 
     @property
     def audio_output(self) -> str:
@@ -313,22 +357,29 @@ for the safe_volume_limit with the constructor or property."""
     @audio_output.setter
     def audio_output(self, audio_output: str) -> None:
         """
-
         :param audio_output: The audio interface to use 'speaker' or 'headphone'.
         :return: None
         """
-        if audio_output == "headphone":
-            self._dac.headphone_output = True
-            self._dac.speaker_output = False
-        elif audio_output == "speaker":
-            self._dac.headphone_output = False
-            self._dac.speaker_output = True
-        else:
+        if audio_output not in {"headphone", "speaker"}:
             raise ValueError("audio_output must be either 'headphone' or 'speaker'")
+        self._apply_audio_output(audio_output)
 
-    def _apply_volume(self) -> None:
+    def _apply_audio_output(self, audio_output: str = None) -> None:
+        """
+        Assign the output of the dac based on the desired setting.
+        """
+        if audio_output is not None:
+            self._audio_output = audio_output
+        if self._dac is not None:
+            self._dac.headphone_output = self._audio_output == "headphone"
+            self._dac.speaker_output = self._audio_output == "speaker"
+
+    def _apply_volume(self, volume_level: int = None) -> None:
         """
         Map the basic volume level to a db value and set it on the DAC.
         """
-        db_val = map_range(self._volume, 1, 20, -63, 23)
-        self._dac.dac_volume = db_val
+        if volume_level is not None:
+            self._volume = volume_level
+        if self._dac is not None:
+            db_val = map_range(self._volume, 1, 20, -63, 23)
+            self._dac.dac_volume = db_val
