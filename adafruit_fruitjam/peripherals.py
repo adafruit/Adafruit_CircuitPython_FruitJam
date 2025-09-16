@@ -323,7 +323,7 @@ class Peripherals:
     @property
     def volume(self) -> float:
         """
-        The volume level of the Fruit Jam audio output. Valid values are 1-20.
+        The volume level of the Fruit Jam audio output. Valid values are 0.0 - 1.0.
         """
         return self._volume
 
