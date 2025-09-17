@@ -383,3 +383,29 @@ for the safe_volume_limit with the constructor or property."""
         if self._dac is not None:
             db_val = map_range(self._volume, 1, 20, -63, 23)
             self._dac.dac_volume = db_val
+
+    def deinit(self) -> None:
+        """
+        Deinitializes Peripherals and releases any hardware resources for reuse.
+        """
+        if self.neopixels is not None:
+            self.neopixels.deinit()
+            self.neopixels = None
+
+        if self._buttons is not None:
+            for button in self._buttons:
+                button.deinit()
+            self._buttons = None
+
+        if self._audio is not None:
+            self._audio.stop()
+            self._audio.deinit()
+            self._audio = None
+
+        if self._dac is not None:
+            self._dac.reset()
+            self._dac = None
+
+        if self._mp3_decoder is not None:
+            self._mp3_decoder.deinit()
+            self._mp3_decoder = None
