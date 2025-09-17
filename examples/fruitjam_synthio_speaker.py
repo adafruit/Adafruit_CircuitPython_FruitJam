@@ -11,7 +11,7 @@ pobj = adafruit_fruitjam.peripherals.Peripherals(audio_output="headphone")
 
 synth = synthio.Synthesizer(sample_rate=44100)
 pobj.audio.play(synth)
-VOLUMES = [5, 7, 10, 11, 12]
+VOLUMES = [0.25, 0.35, 0.50, 0.55, 0.60]
 C_major_scale = [60, 62, 64, 65, 67, 69, 71, 72, 71, 69, 67, 65, 64, 62, 60]
 while True:
     print("\n=== Synthio Test ===")

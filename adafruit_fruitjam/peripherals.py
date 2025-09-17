@@ -136,7 +136,7 @@ class Peripherals:
     """Peripherals Helper Class for the FruitJam Library
 
     :param audio_output: The audio output interface to use 'speaker' or 'headphone'
-    :param safe_volume_limit: The maximum volume allowed for the audio output. Default is 12.
+    :param safe_volume_limit: The maximum volume allowed for the audio output. Default is 0.75.
         Using higher values can damage some speakers, change at your own risk.
     :param sample_rate: The sample rate to play back audio data in hertz. Default is 11025.
     :param bit_depth: The bits per sample of the audio data. Supports 8 and 16 bits. Default is 16.
@@ -150,7 +150,7 @@ class Peripherals:
     def __init__(  # noqa: PLR0913, PLR0912
         self,
         audio_output: str = "headphone",
-        safe_volume_limit: int = 12,
+        safe_volume_limit: float = 0.75,
         sample_rate: int = 11025,
         bit_depth: int = 16,
         i2c: busio.I2C = None,
@@ -189,12 +189,12 @@ class Peripherals:
         else:
             self._audio = None
 
-        if safe_volume_limit < 1 or safe_volume_limit > 20:
-            raise ValueError("safe_volume_limit must be between 1 and 20")
+        if not (0.0 <= safe_volume_limit <= 1.0):
+            raise ValueError("safe_volume_limit must be between 0.0 and 1.0")
         self.safe_volume_limit = safe_volume_limit
 
         self.audio_output = audio_output
-        self._apply_volume(7)
+        self._apply_volume(0.35)
 
         self._sd_mounted = False
         sd_pins_in_use = False
@@ -321,20 +321,20 @@ class Peripherals:
                 self.wavfile.close()
 
     @property
-    def volume(self) -> int:
+    def volume(self) -> float:
         """
-        The volume level of the Fruit Jam audio output. Valid values are 1-20.
+        The volume level of the Fruit Jam audio output. Valid values are 0.0 - 1.0.
         """
         return self._volume
 
     @volume.setter
-    def volume(self, volume_level: int) -> None:
+    def volume(self, volume_level: float) -> None:
         """
-        :param volume_level: new volume level 1-20
+        :param volume_level: new volume level 0.0 - 1.0
         :return: None
         """
-        if not (1 <= volume_level <= 20):
-            raise ValueError("Volume level must be between 1 and 20")
+        if not (0.0 <= volume_level <= 1.0):
+            raise ValueError("Volume level must be between 0.0 and 1.0")
 
         if volume_level > self.safe_volume_limit:
             raise ValueError(
@@ -374,14 +374,14 @@ for the safe_volume_limit with the constructor or property."""
             self._dac.headphone_output = self._audio_output == "headphone"
             self._dac.speaker_output = self._audio_output == "speaker"
 
-    def _apply_volume(self, volume_level: int = None) -> None:
+    def _apply_volume(self, volume_level: float = None) -> None:
         """
         Map the basic volume level to a db value and set it on the DAC.
         """
         if volume_level is not None:
             self._volume = volume_level
         if self._dac is not None:
-            db_val = map_range(self._volume, 1, 20, -63, 23)
+            db_val = map_range(self._volume, 0.0, 1.0, -63, 23)
             self._dac.dac_volume = db_val
 
     def deinit(self) -> None:
