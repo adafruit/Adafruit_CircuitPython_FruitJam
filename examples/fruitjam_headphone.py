@@ -7,7 +7,7 @@ import adafruit_fruitjam
 
 pobj = adafruit_fruitjam.peripherals.Peripherals(audio_output="headphone")
 
-FILES = ["beep.wav", "dip.wav", "rise.wav"]
+FILES = ["wav/beep.wav", "wav/dip.wav", "wav/rise.wav"]
 VOLUMES = [0.25, 0.35, 0.50, 0.55, 0.60]
 
 while True:
