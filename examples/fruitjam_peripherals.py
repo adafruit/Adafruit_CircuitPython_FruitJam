@@ -7,18 +7,18 @@ import displayio
 import supervisor
 from audiocore import WaveFile
 
-from adafruit_fruitjam import FruitJam
+from adafruit_fruitjam.peripherals import Peripherals
 
 colors = [0xFF00FF, 0xFFFF00, 0x00FF00]
 
-fruitjam = FruitJam()
+fruitjam = Peripherals()
 fruitjam.neopixels.brightness = 0.1
 fruitjam.neopixels.fill(0xFF00FF)
 
 time.sleep(2)
 fruitjam.neopixels.fill(0x000000)
-
-wave_file = open("/boot_animation/ada_fruitjam_boot_jingle.wav", "rb")
+fruitjam.volume = 0.65
+wave_file = open("/wav/ada_fruitjam_boot_jingle.wav", "rb")
 wave = WaveFile(wave_file)
 fruitjam.audio.play(wave)
 
