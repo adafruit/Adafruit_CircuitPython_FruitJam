@@ -256,6 +256,10 @@ class Peripherals:
 
     @property
     def dac(self) -> adafruit_tlv320.TLV320DAC3100:
+        """
+        The instance of the ``adafruit_tlv320.TLV320DAC3100`` driver class.
+        Can be used for lower level DAC control.
+        """
         return self._dac
 
     @dac.setter
@@ -269,6 +273,9 @@ class Peripherals:
 
     @property
     def audio(self) -> audiobusio.I2SOut:
+        """
+        Instance of ``audiobusio.I2SOut`` ready to play audio through the TLV320 DAC.
+        """
         return self._audio
 
     @audio.setter
@@ -280,12 +287,16 @@ class Peripherals:
         self._audio = value
 
     def sd_check(self) -> bool:
+        """
+        Whether the SD card is mounted.
+        :return: True if SD is mounted, False otherwise
+        """
         return self._sd_mounted
 
     def play_file(self, file_name, wait_to_finish=True):
         """Play a wav file.
 
-        :param str file_name: The name of the wav file to play on the speaker.
+        :param str file_name: The name of the wav file to play.
         :param bool wait_to_finish: flag to determine if this is a blocking call
 
         """
@@ -300,7 +311,12 @@ class Peripherals:
                 pass
             self.wavfile.close()
 
-    def play_mp3_file(self, filename):
+    def play_mp3_file(self, filename: str):
+        """
+        Play a mp3 audio file.
+
+        :param str filename: The name of the mp3 file to play.
+        """
         if self._audio is not None:
             if self._mp3_decoder is None:
                 from audiomp3 import MP3Decoder  # noqa: PLC0415, import outside top-level
