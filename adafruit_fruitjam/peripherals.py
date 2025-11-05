@@ -224,7 +224,9 @@ class Peripherals:
             except OSError:
                 # sdcard init or mounting failed
                 self._sd_mounted = False
+
         self._mp3_decoder = None
+        self.wavfile = None
 
     @property
     def button1(self) -> bool:
