@@ -7,7 +7,7 @@ import displayio
 import supervisor
 from audiocore import WaveFile
 
-from adafruit_fruitjam.peripherals import Peripherals
+from adafruit_fruitjam.peripherals import Peripherals, request_display_config
 
 colors = [0xFF00FF, 0xFFFF00, 0x00FF00]
 
@@ -23,6 +23,10 @@ wave = WaveFile(wave_file)
 fruitjam.audio.play(wave)
 
 display = supervisor.runtime.display
+if display is None:
+    request_display_config(640, 480)
+    display = supervisor.runtime.display
+
 empty_group = displayio.Group()
 display.root_group = empty_group
 
