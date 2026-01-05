@@ -39,6 +39,7 @@ import digitalio
 import displayio
 import framebufferio
 import picodvi
+import pwmio
 import storage
 import supervisor
 from adafruit_simplemath import map_range
@@ -177,9 +178,18 @@ class Peripherals:
             i2c.unlock()
 
             if dac_present:
+                if "I2S_MCLK" in dir(board):
+                    self._mclk_out = pwmio.PWMOut(
+                        board.I2S_MCLK, frequency=15_000_000, duty_cycle=2**15
+                    )
+                else:
+                    self._mclk_out = None
+
                 self._dac = adafruit_tlv320.TLV320DAC3100(i2c)
                 self._dac.configure_clocks(  # set sample rate & bit depth
-                    sample_rate=sample_rate, bit_depth=bit_depth
+                    sample_rate=sample_rate,
+                    bit_depth=bit_depth,
+                    mclk_freq=self._mclk_out.frequency if self._mclk_out is not None else None,
                 )
             else:
                 self._dac = None
@@ -423,6 +433,9 @@ for the safe_volume_limit with the constructor or property."""
         if self._dac is not None:
             self._dac.reset()
             self._dac = None
+            if self._mclk_out is not None:
+                self._mclk_out.deinit()
+                self._mclk_out = None
 
         if self._mp3_decoder is not None:
             self._mp3_decoder.deinit()
