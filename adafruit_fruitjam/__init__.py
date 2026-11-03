@@ -41,6 +41,12 @@ from adafruit_esp32spi import adafruit_esp32spi
 from adafruit_portalbase import PortalBase
 from digitalio import DigitalInOut
 
+try:
+    # Present when CircuitPython can manage the ESP32 itself (for web workflow).
+    import _airlift
+except ImportError:
+    _airlift = None
+
 from adafruit_fruitjam.graphics import Graphics
 from adafruit_fruitjam.network import CONTENT_IMAGE, CONTENT_JSON, CONTENT_TEXT, Network
 from adafruit_fruitjam.peripherals import Peripherals
@@ -151,7 +157,11 @@ class FruitJam(PortalBase):
                     self.display.height,
                 )  # default to full screen
 
-        if esp is None:
+        if esp is None and _airlift is not None and _airlift.active():
+            # CircuitPython is using the ESP32 (web workflow is configured), so
+            # its pins are taken. Share it through the core instead.
+            esp = adafruit_esp32spi.ESP_SPIcontrol()
+        elif esp is None:
             esp32_cs = DigitalInOut(board.ESP_CS)
             esp32_ready = DigitalInOut(board.ESP_BUSY)
             esp32_reset = DigitalInOut(board.ESP_RESET)
